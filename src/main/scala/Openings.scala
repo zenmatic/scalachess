@@ -2,18 +2,36 @@ package chess
 
 object Openings {
 
-  def generals: List[(String, String)] = {
+  private type Op = (String, String, String)
+
+  def generals: List[(String, String)] =
+    generalsWithMoves map {
+      case (a, b, _) => a -> b
+    }
+
+  def generalsWithMoves: List[Op] = {
     val all = db
     all.map(_._1).distinct.sorted flatMap { code =>
       val candidates = all filter (_._1 == code)
       candidates find (_._2 endsWith "General") orElse
-        candidates.sortBy(_._3.split(' ').length).headOption map {
-          case (a, b, _) => a -> b
-        }
+        candidates.sortBy(_._3.split(' ').length).headOption
     }
   }
 
-  def db: List[(String, String, String)] = List(
+  def restrictedListWithMoves: List[(String, String)] = {
+    val all = db
+    def nameOf(full: String): Option[String] = full.split(',').headOption
+    def nameOfOp(op: Op): Option[String] = nameOf(op._2)
+    all.map(_._2).flatMap(nameOf).distinct.sorted.flatMap { name =>
+      val candidates = all filter { f => nameOfOp(f) == name }
+      candidates find (_._2 endsWith "General") orElse
+        candidates.sortBy(_._3.split(' ').length).headOption flatMap {
+          case (_, full, moves) => nameOf(full) map { _ -> moves }
+        }
+      }
+  }
+
+  def db: List[Op] = List(
     ("B03", "Alekhine Defense, Balogh Variation", "e4 Nf6 e5 Nd5 d4 d6 Bc4"),
     ("B02", "Alekhine Defense, Brooklyn Variation", "e4 Nf6 e5 Ng8"),
     ("B03", "Alekhine Defense, Exchange Variation", "e4 Nf6 e5 Nd5 d4 d6 c4 Nb6 exd6"),
@@ -560,7 +578,7 @@ object Openings {
     ("A51", "Indian Game, Budapest Defense", "d4 Nf6 c4 e5"),
     ("A48", "Indian Game, Colle System, King's Indian Variation", "d4 Nf6 Nf3 g6 e3 Bg7 Bd3 d6"),
     ("A46", "Indian Game, Czech-Indian", "d4 Nf6 Nf3 c6"),
-    ("E10", "Indian Game, Dzindzichashvili Defense", "d4 Nf6 c4 e6 Nf3 a6"),    
+    ("E10", "Indian Game, Dzindzichashvili Defense", "d4 Nf6 c4 e6 Nf3 a6"),
     ("E10", "Indian Game, Dzindzichashvili Defense, Djin Variation", "d4 Nf6 c4 e6 Nf3 a6 Nc3 b5"),
     ("A48", "Indian Game, East Indian Defense", "d4 Nf6 Nf3 g6"),
     ("A45", "Indian Game, General", "d4 Nf6"),
