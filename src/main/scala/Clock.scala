@@ -18,9 +18,7 @@ protected sealed trait Clock[A <: Clock[A]] { self: A =>
   def incrementSeconds = config.incrementSeconds
   def increment = config.increment
 
-  def time(c: Color): Centis = players(c).time
-
-  def outoftime(c: Color) = remainingTime(c).centis == 0
+  def outoftime(c: Color) = elapsedTime(c) > limit
 
   def outoftimeWithGrace(c: Color) =
     timeSinceFlag(c).exists((lag(c) * 2 atMost Clock.maxLagToCompensate).<)
@@ -34,7 +32,7 @@ protected sealed trait Clock[A <: Clock[A]] { self: A =>
     case _ => None
   }
 
-  def elapsedTime(c: Color) = time(c)
+  def elapsedTime(c: Color): Centis
 
   def limitInMinutes = config.limitInMinutes
 
@@ -80,10 +78,11 @@ protected sealed trait Clock[A <: Clock[A]] { self: A =>
   def giveTime(c: Color, t: Centis): A = addTime(c, -t)
 
   def setRemainingTime(c: Color, centis: Centis): A =
-    addTime(c, remainingTime(c) - centis)
+    updatePlayer(c, _.copy(time = limit - centis))
 
-  def goBerserk(c: Color): A = if (berserked(c)) self else
+  def goBerserk(c: Color): A = if (berserked(c)) self else {
     updatePlayer(c, _.addTime(berserkPenalty).copy(berserk = true))
+  }
 
   def switch: A
 }
@@ -98,7 +97,8 @@ final case class RunningClock(
   val isRunning = true
 
   override def elapsedTime(c: Color) = {
-    if (c == color) (timer to now) + time(c) else time(c)
+    val curTime = players(c).time
+    if (c == color) (timer to now) + curTime else curTime
   }
 
   override def updatePlayer(c: Color, f: Player => Player) = {
@@ -138,6 +138,8 @@ final case class PausedClock(
 ) extends Clock[PausedClock] {
 
   val isRunning = false
+
+  def elapsedTime(c: Color) = players(c).time
 
   def stop = this
 

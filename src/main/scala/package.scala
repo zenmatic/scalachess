@@ -23,6 +23,8 @@ package object chess
   val White = Color.White
   val Black = Color.Black
 
+  // type Clock = TypedClock[_]
+
   type Direction = Pos => Option[Pos]
   type Directions = List[Direction]
 
