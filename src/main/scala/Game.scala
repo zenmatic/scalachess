@@ -52,9 +52,9 @@ case class Game(
     )
   }
 
-  private def applyClock(lag: Centis, withInc: Boolean) = clock.map[Clock.Any] {
+  private def applyClock(lag: Centis, withInc: Boolean) = clock.map {
     case c: RunningClock => c.step(lag, withInc)
-    case c: PausedClock => if ((turns - startedAtTurn) == 1) c.switch.start else c.switch
+    case c: PausedClock => if (turns - startedAtTurn == 1) c.switch.start else c.switch
   }
 
   def apply(uci: Uci.Move): Valid[(Game, Move)] = apply(uci.orig, uci.dest, uci.promotion)

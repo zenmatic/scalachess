@@ -2,17 +2,11 @@ package chess
 
 import java.text.DecimalFormat
 
-case class Player(
-    time: Centis = Centis(0),
-    lag: Centis = Centis(0),
-    berserk: Boolean = false
-) {
-  def addTime(t: Centis) = copy(time = time + t)
-}
+import Clock.{ Config, Player }
 
 // All unspecified durations are expressed in seconds
-sealed trait Clock[+A <: Clock[A]] {
-  val config: Clock.Config
+protected sealed trait Clock[A <: Clock[A]] { self: A =>
+  val config: Config
   val players: Color.Map[Player]
   val color: Color
 
@@ -53,10 +47,6 @@ sealed trait Clock[+A <: Clock[A]] {
   // Emergency time cutoff, in seconds.
   def emergTime = config.emergTime
 
-  def stop: PausedClock
-
-  def start: RunningClock
-
   def berserked(c: Color) = players(c).berserk
 
   def show = config.toString
@@ -71,11 +61,18 @@ sealed trait Clock[+A <: Clock[A]] {
 
   protected def now = Timestamp.now
 
-  private[chess] def berserkPenalty =
-    if (limitSeconds < estimateTotalSeconds) Centis(0)
+  protected def berserkPenalty =
+    if (limitSeconds < config.estimateTotalIncSeconds) Centis(0)
     else Centis(limitSeconds * (100 / 2))
 
-  // Typed methods.
+  //
+  // TYPED METHODS BELOW
+  // 
+
+  def stop: PausedClock
+
+  def start: RunningClock
+
   def updatePlayer(c: Color, f: Player => Player): A
 
   def addTime(c: Color, t: Centis): A = updatePlayer(c, _.addTime(t))
@@ -85,16 +82,14 @@ sealed trait Clock[+A <: Clock[A]] {
   def setRemainingTime(c: Color, centis: Centis): A =
     addTime(c, remainingTime(c) - centis)
 
-  def goBerserk(c: Color): A = updatePlayer(c, p => {
-    if (p.berserk) p
-    else p.addTime(berserkPenalty).copy(berserk = true)
-  })
+  def goBerserk(c: Color): A = if (berserked(c)) self else
+    updatePlayer(c, _.addTime(berserkPenalty).copy(berserk = true))
 
   def switch: A
 }
 
 final case class RunningClock(
-    config: Clock.Config,
+    config: Config,
     color: Color,
     players: Color.Map[Player],
     timer: Timestamp
@@ -106,8 +101,10 @@ final case class RunningClock(
     if (c == color) (timer to now) + time(c) else time(c)
   }
 
-  override def updatePlayer(c: Color, f: Player => Player) =
-    copy(players = players.update(c, f))
+  override def updatePlayer(c: Color, f: Player => Player) = {
+    val newPlayers = players.update(c, f)
+    if (players == newPlayers) this else copy(players = newPlayers)
+  }
 
   def step(lag: Centis = Centis(0), withInc: Boolean = true) = {
     val t = now
@@ -135,7 +132,7 @@ final case class RunningClock(
 }
 
 final case class PausedClock(
-    config: Clock.Config,
+    config: Config,
     color: Color,
     players: Color.Map[Player]
 ) extends Clock[PausedClock] {
@@ -161,6 +158,14 @@ object Clock {
   type Any = Clock[_]
 
   private val limitFormatter = new DecimalFormat("#.##")
+
+  case class Player(
+      time: Centis = Centis(0),
+      lag: Centis = Centis(0),
+      berserk: Boolean = false
+  ) {
+    def addTime(t: Centis) = if (t.centis == 0) this else copy(time = time + t)
+  }
 
   // All unspecified durations are expressed in seconds
   case class Config(limitSeconds: Int, incrementSeconds: Int) {
@@ -226,15 +231,4 @@ object Clock {
       players = Color.Map(_ => Player(time = initTime))
     )
   }
-
-  def formatSeconds(t: Int) = periodFormatter.print(
-    org.joda.time.Duration.standardSeconds(t).toPeriod
-  )
-
-  private val periodFormatter = new org.joda.time.format.PeriodFormatterBuilder()
-    .printZeroAlways
-    .minimumPrintedDigits(1).appendHours.appendSeparator(":")
-    .minimumPrintedDigits(2).appendMinutes.appendSeparator(":")
-    .appendSeconds
-    .toFormatter
 }
