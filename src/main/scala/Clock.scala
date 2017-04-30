@@ -11,9 +11,10 @@ case class Player(
 }
 
 // All unspecified durations are expressed in seconds
-trait BaseClock {
+sealed trait Clock[+A <: Clock[A]] {
   val config: Clock.Config
   val players: Color.Map[Player]
+  val color: Color
 
   def lag(c: Color) = players(c).lag
 
@@ -74,11 +75,7 @@ trait BaseClock {
     if (limitSeconds < estimateTotalSeconds) Centis(0)
     else Centis(limitSeconds * (100 / 2))
 
-}
-
-sealed trait Clock[+A <: Clock[A]] extends BaseClock {
-  val color: Color
-
+  // Typed methods.
   def updatePlayer(c: Color, f: Player => Player): A
 
   def addTime(c: Color, t: Centis): A = updatePlayer(c, _.addTime(t))

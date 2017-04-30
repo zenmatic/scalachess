@@ -9,7 +9,7 @@ class ClockTest extends ChessTest {
     val game = makeGame withClock clock.start
     "new game" in {
       game.clock must beSome.like {
-        case c: => c.color must_== White
+        case c => c.color must_== White
       }
     }
     "one move played" in {
