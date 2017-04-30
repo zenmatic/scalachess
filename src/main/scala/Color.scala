@@ -30,6 +30,9 @@ object Color {
 
   case class Map[A](white: A, black: A) {
     def apply(color: Color) = if (color.white) white else black
+
+    def update(color: Color, f: A => A) =
+      if (color.white) copy(white = f(white)) else copy(black = f(black))
   }
 
   object Map {

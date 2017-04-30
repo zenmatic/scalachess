@@ -67,7 +67,7 @@ trait ChessTest
     ): Valid[Game] =
       game.apply(orig, dest, promotion) map (_._1)
 
-    def withClock(c: Clock) = game.copy(clock = Some(c))
+    def withClock(c: Clock.Any) = game.copy(clock = Some[Clock.Any](c))
   }
 
   def fenToGame(positionString: String, variant: Variant) = {
