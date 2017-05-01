@@ -7,7 +7,7 @@ case class Drop(
     pos: Pos,
     before: Board,
     after: Board,
-    lag: Centis = Centis(0)
+    metrics: Option[MoveMetrics] = None
 ) {
 
   def situationBefore = before situationOf piece.color

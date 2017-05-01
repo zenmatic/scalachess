@@ -6,7 +6,7 @@ case class Game(
     board: Board,
     player: Color = White,
     pgnMoves: List[String] = Nil,
-    clock: Option[Clock.Any] = None,
+    clock: Option[Clock] = None,
     turns: Int = 0, // plies
     startedAtTurn: Int = 0
 ) {
@@ -52,9 +52,9 @@ case class Game(
     )
   }
 
-  private def applyClock(lag: Centis, withInc: Boolean) = clock.map {
-    case c: RunningClock => c.step(lag, withInc)
-    case c: PausedClock => if (turns - startedAtTurn == 1) c.switch.start else c.switch
+  private def applyClock(metrics: MoveMetrics, withInc: Boolean) = clock.map {
+    case c if c.isRunning => c.step(lag, withInc)
+    case c => if (turns - startedAtTurn == 1) c.switch.start else c.switch
   }
 
   def apply(uci: Uci.Move): Valid[(Game, Move)] = apply(uci.orig, uci.dest, uci.promotion)
