@@ -9,7 +9,7 @@ case class Centis(centis: Int) extends AnyVal with Ordered[Centis] {
     if (centis > 0) (centis + 5) / 10 else (centis - 4) / 10
   def roundSeconds: Int = math.round(toSeconds)
 
-  def toSeconds: Float = centis / 100f
+  def toSeconds: Float = centis * 0.01f
   def millis: Long = centis * 10l
   def toDuration = FiniteDuration(millis, MILLISECONDS)
 

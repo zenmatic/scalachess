@@ -10,7 +10,7 @@ protected sealed trait BaseClock {
   val players: Color.Map[Player]
 
   protected def berserkPenalty =
-    if (limitSeconds < config.estimateTotalIncSeconds) Centis(0)
+    if (limitSeconds < 40 * incrementSeconds) Centis(0)
     else Centis(limitSeconds * (100 / 2))
 
   def incrementOf(c: Color) = if (berserked(c)) Centis(0) else increment
@@ -19,7 +19,6 @@ protected sealed trait BaseClock {
   def lag(c: Color) = players(c).lag
 
   def emergSeconds = config.emergSeconds
-  def estimateTotalIncrement = config.estimateTotalIncrement
   def estimateTotalSeconds = config.estimateTotalSeconds
   def estimateTotalTime = config.estimateTotalTime
   def increment = config.increment
@@ -52,7 +51,7 @@ case class Clock(
   }
 
   def outoftimeWithGrace(c: Color) =
-    timeSinceFlag(c).exists(_ > (lag(c) * 2 atMost Clock.maxLagToCompensate))
+    timeSinceFlag(c).exists(t => t > Clock.maxGrace_ > (lag(c) * 2 atMost))
 
   def moretimeable(c: Color) = rawRemaining(c).centis < 100 * 60 * 60 * 2
 
@@ -78,7 +77,8 @@ case class Clock(
       val newT = now
       val elapsed = t to newT
 
-      val lag = metrics.clientMoveTime.fold(metrics.clientLag getOrElse Centis(0))(elapsed - _)
+      val lag = metrics.estimateLag(elapsed).fold(Centis(0))(_.nonNeg)
+
       val lagComp = lag atMost Clock.maxLagToCompensate nonNeg
       val inc = if (withInc) incrementOf(color) else Centis(0)
 
@@ -102,9 +102,10 @@ case class Clock(
     timer = timer.map(_ => now)
   )
 
-  def deinc = updatePlayer(color, _.giveTime(-incrementOf(color)))
+  // To do: safely add this to takeback to remove inc from player.
+  // def deinc = updatePlayer(color, _.giveTime(-incrementOf(color)))
 
-  def takeback = switch.deinc
+  def takeback = switch
 
   def giveTime(c: Color, t: Centis) = updatePlayer(c, _.giveTime(t))
 
@@ -125,7 +126,7 @@ object Clock {
 
   case class Player(
       elapsed: Centis = Centis(0),
-      lag: Centis = Centis(0),
+      lag: Stats = Stats,
       berserk: Boolean = false,
       limit: Centis
   ) {
@@ -140,8 +141,6 @@ object Clock {
     def berserkable = incrementSeconds == 0 || limitSeconds > 0
 
     def emergSeconds = math.min(60, math.max(10, limitSeconds / 8))
-
-    def estimateTotalIncrement = Centis.ofSeconds(estimateTotalIncSeconds)
 
     def estimateTotalIncSeconds = 40 * incrementSeconds
 
@@ -182,7 +181,9 @@ object Clock {
 
   val minLimit = Centis(300)
   // no more than this time will be offered to the lagging player
-  val maxLagToCompensate = Centis(100)
+  val absoluteMaxLagComp = Centis(300)
+  val avgMaxLagComp = Centis(100)
+  val maxGrace = Centis(150)
 
   def apply(limit: Int, increment: Int): Clock = apply(Config(limit, increment))
 
