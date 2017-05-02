@@ -51,7 +51,7 @@ case class Clock(
   }
 
   def outoftimeWithGrace(c: Color) =
-    timeSinceFlag(c).exists(t => t > Clock.maxGrace_ > (lag(c) * 2 atMost))
+    timeSinceFlag(c).exists(t => t > (lag(c) * 2 atMost Clock.maxGrace))Z
 
   def moretimeable(c: Color) = rawRemaining(c).centis < 100 * 60 * 60 * 2
 
@@ -77,9 +77,9 @@ case class Clock(
       val newT = now
       val elapsed = t to newT
 
-      val lag = metrics.estimateLag(elapsed).fold(Centis(0))(_.nonNeg)
+      val lag = metrics.estimateLag(elapsed)
 
-      val lagComp = lag atMost Clock.maxLagToCompensate nonNeg
+      val lagComp = players(color).lagCompWith(lag)
       val inc = if (withInc) incrementOf(color) else Centis(0)
 
       val adjustedMoveTime = ((elapsed - lagComp) nonNeg)
@@ -126,13 +126,16 @@ object Clock {
 
   case class Player(
       elapsed: Centis = Centis(0),
-      lag: Stats = Stats,
+      lag: Centis = Centis(0),
       berserk: Boolean = false,
-      limit: Centis
+      limit: Centis,
+      lagCompQuota: Centis = Centis(200)
   ) {
     def remaining = limit - elapsed
     def giveTime(t: Centis) = copy(limit = limit + t)
     def addElapsed(t: Centis) = copy(elapsed = elapsed + t)
+
+    def lagCompWith(lag: Option[Centis]): Centis = ???
   }
 
   // All unspecified durations are expressed in seconds
@@ -142,9 +145,7 @@ object Clock {
 
     def emergSeconds = math.min(60, math.max(10, limitSeconds / 8))
 
-    def estimateTotalIncSeconds = 40 * incrementSeconds
-
-    def estimateTotalSeconds = limitSeconds + estimateTotalIncSeconds
+    def estimateTotalSeconds = limitSeconds + 40 * incrementSeconds
 
     def estimateTotalTime = Centis.ofSeconds(estimateTotalSeconds)
 

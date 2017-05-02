@@ -5,5 +5,5 @@ case class MoveMetrics(
     clientMoveTime: Option[Centis] = None
 ) {
   def estimateLag(elapsed: Centis) =
-    clientMoveTime.fold(metrics.clientLag)(mt => Some(elapsed - mt))
+    clientMoveTime.fold(clientLag)(mt => Some(elapsed - mt))
 }
