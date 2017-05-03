@@ -32,11 +32,9 @@ case class Clock(
     config: Config,
     color: Color,
     players: Color.Map[Player],
-    timer: Option[Timestamp]
+    timer: Option[Timestamp] = None
 ) extends BaseClock {
   import Timestamp.now
-
-  private def pending = timer.fold(Centis(0))(_ to now)
 
   private def rawRemaining(c: Color) = {
     val time = players(c).remaining
@@ -59,7 +57,7 @@ case class Clock(
 
   def isRunning = timer.isDefined
 
-  def start = if (timer.isDefined) this else copy(timer = Some(now))
+  def start = if (isRunning) this else copy(timer = now)
 
   def stop = timer.fold(this) { t =>
     copy(
@@ -121,22 +119,33 @@ case class Clock(
   })
 }
 
+case class ClockPlayer(
+    limit: Centis,
+    elapsed: Centis = Centis(0),
+    lag: Centis = Centis(0),
+    berserk: Boolean = false,
+    lagCompQuota: Centis = Centis(200)
+) {
+  def pending = timer.fold(elapsed)(t => elapsed + (t to now))
+
+  def remaining = limit - pending
+
+  def giveTime(t: Centis) = copy(limit = limit + t)
+  def stop = timer match {
+    case None => this
+    case _ => copy(elapsed = pending, timer = None)
+  }
+
+  def start = timer match {
+    case None => copy(timer = Some(now))
+    case _ => this
+  }
+
+  def lagCompWith(lag: Option[Centis]): Centis = ???
+}
+
 object Clock {
   private val limitFormatter = new DecimalFormat("#.##")
-
-  case class Player(
-      elapsed: Centis = Centis(0),
-      lag: Centis = Centis(0),
-      berserk: Boolean = false,
-      limit: Centis,
-      lagCompQuota: Centis = Centis(200)
-  ) {
-    def remaining = limit - elapsed
-    def giveTime(t: Centis) = copy(limit = limit + t)
-    def addElapsed(t: Centis) = copy(elapsed = elapsed + t)
-
-    def lagCompWith(lag: Option[Centis]): Centis = ???
-  }
 
   // All unspecified durations are expressed in seconds
   case class Config(limitSeconds: Int, incrementSeconds: Int) {

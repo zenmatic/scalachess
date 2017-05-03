@@ -34,7 +34,9 @@ object Color {
     def update(color: Color, f: A => A) =
       if (color.white) copy(white = f(white)) else copy(black = f(black))
 
-    def map(fw: A => A, fb: A => A) = copy(white = fw(white), black = fb(black))
+    def map[B](fw: A => B, fb: A => B) = copy(white = fw(white), black = fb(black))
+
+    def map[B](f: A => B) = map(f, f)
 
     def all(pred: A => Boolean) = pred(white) && pred(black)
   }
