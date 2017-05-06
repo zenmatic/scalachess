@@ -15,7 +15,7 @@ case class Game(
     orig: Pos,
     dest: Pos,
     promotion: Option[PromotableRole] = None,
-    lag: Centis = Centis(0)
+    lag: MoveMetrics = MoveMetrics()
   ): Valid[(Game, Move)] =
     situation.move(orig, dest, promotion).map(_.normalizeCastle withLag lag) map { move =>
       apply(move) -> move
@@ -34,7 +34,11 @@ case class Game(
     )
   }
 
-  def drop(role: Role, pos: Pos, lag: Centis = Centis(0)): Valid[(Game, Drop)] =
+  def drop(
+    role: Role,
+    pos: Pos,
+    lag: MoveMetrics = MoveMetrics()
+  ): Valid[(Game, Drop)] =
     situation.drop(role, pos).map(_ withLag lag) map { drop =>
       applyDrop(drop) -> drop
     }
@@ -52,7 +56,7 @@ case class Game(
     )
   }
 
-  private def applyClock(metrics: MoveMetrics, withInc: Boolean) = clock.map {
+  private def applyClock(lag: MoveMetrics, withInc: Boolean) = clock.map {
     case c if c.isRunning => c.step(lag, withInc)
     case c => if (turns - startedAtTurn == 1) c.switch.start else c.switch
   }

@@ -2,12 +2,87 @@ package chess
 
 import java.text.DecimalFormat
 
-import Clock.{ Config, Player }
+import Clock.Config
 
 // All unspecified durations are expressed in seconds
-protected sealed trait BaseClock {
-  val config: Config
-  val players: Color.Map[Player]
+case class Clock(
+    config: Config,
+    color: Color,
+    players: Color.Map[ClockPlayer],
+    timer: Option[Timestamp] = None
+) {
+  import Timestamp.now
+
+  @inline private def pending(c: Color) = timer match {
+    case Some(t) if c == color => t.toNow
+    case _ => Centis(0)
+  }
+
+  @inline private def rawRemaining(c: Color) =
+    players(c).remaining - pending(c)
+
+  def remainingTime(c: Color) = rawRemaining(c) nonNeg
+
+  def outOfTimeWithGrace(c: Color) = players(c).remainingGrace < pending(c)
+
+  def moretimeable(c: Color) = rawRemaining(c).centis < 100 * 60 * 60 * 2
+
+  def isInit = players.forall(_.isInit)
+
+  def isRunning = timer.isDefined
+
+  def start = if (isRunning) this else copy(timer = Some(now))
+
+  def stop = timer.fold(this) { t =>
+    copy(
+      players = players.update(color, _.adjust(t.toNow)),
+      timer = None
+    )
+  }
+
+  def updatePlayer(c: Color)(f: ClockPlayer => ClockPlayer) =
+    copy(players = players.update(c, f))
+
+  def switch = copy(
+    color = !color,
+    timer = timer.map(_ => now)
+  )
+
+  def step(
+    metrics: MoveMetrics = MoveMetrics(),
+    withInc: Boolean = true
+  ) = {
+    val elapsed = timer.get.toNow
+
+    val lagComp = players(color).lagComp(metrics.reportedLag(elapsed))
+
+    updatePlayer(color) {
+      _.adjust(
+        elapsedDelta = (elapsed - lagComp) nonNeg,
+        limitDelta = if (withInc) incrementOf(color) else Centis(0)
+      )
+    }.switch
+  }
+  // To do: safely add this to takeback to remove inc from player.
+  // def deinc = updatePlayer(color, _.giveTime(-incrementOf(color)))
+
+  def takeback = switch
+
+  def giveTime(c: Color, t: Centis) = updatePlayer(c) {
+    _.giveTime(t)
+  }
+
+  def setRemainingTime(c: Color, centis: Centis) = updatePlayer(c) {
+    _.copy(elapsed = limit - centis)
+  }
+
+  def goBerserk(c: Color) = updatePlayer(c) { p =>
+    if (p.berserk) p
+    else p.copy(
+      berserk = true,
+      limit = p.limit - berserkPenalty
+    )
+  }
 
   protected def berserkPenalty =
     if (limitSeconds < 40 * incrementSeconds) Centis(0)
@@ -28,120 +103,36 @@ protected sealed trait BaseClock {
   def limitSeconds = config.limitSeconds
 }
 
-case class Clock(
-    config: Config,
-    color: Color,
-    players: Color.Map[Player],
-    timer: Option[Timestamp] = None
-) extends BaseClock {
-  import Timestamp.now
-
-  private def rawRemaining(c: Color) = {
-    val time = players(c).remaining
-    if (c == color) time - pending else time
-  }
-
-  def remainingTime(c: Color) = rawRemaining(c) nonNeg
-
-  private def timeSinceFlag(c: Color): Option[Centis] = rawRemaining(c) match {
-    case s if s.centis <= 0 => Some(-s)
-    case _ => None
-  }
-
-  def outoftimeWithGrace(c: Color) =
-    timeSinceFlag(c).exists(t => t > (lag(c) * 2 atMost Clock.maxGrace))Z
-
-  def moretimeable(c: Color) = rawRemaining(c).centis < 100 * 60 * 60 * 2
-
-  def isInit = players.all(_.elapsed.centis == 0)
-
-  def isRunning = timer.isDefined
-
-  def start = if (isRunning) this else copy(timer = now)
-
-  def stop = timer.fold(this) { t =>
-    copy(
-      players = players.update(color, _.addElapsed(t to now)),
-      timer = None
-    )
-  }
-
-  def updatePlayer(c: Color, f: Player => Player) =
-    copy(players = players.update(c, f))
-
-  def step(metrics: MoveMetrics, withInc: Boolean = true) = timer match {
-    case None => this
-    case Some(t) => {
-      val newT = now
-      val elapsed = t to newT
-
-      val lag = metrics.estimateLag(elapsed)
-
-      val lagComp = players(color).lagCompWith(lag)
-      val inc = if (withInc) incrementOf(color) else Centis(0)
-
-      val adjustedMoveTime = ((elapsed - lagComp) nonNeg)
-
-      copy(
-        timer = Some(newT),
-        players = players.update(color, p => {
-          p.copy(
-            elapsed = p.elapsed + adjustedMoveTime,
-            limit = p.limit + inc
-          )
-        }),
-        color = !color
-      )
-    }
-  }
-
-  def switch = copy(
-    color = !color,
-    timer = timer.map(_ => now)
-  )
-
-  // To do: safely add this to takeback to remove inc from player.
-  // def deinc = updatePlayer(color, _.giveTime(-incrementOf(color)))
-
-  def takeback = switch
-
-  def giveTime(c: Color, t: Centis) = updatePlayer(c, _.giveTime(t))
-
-  def setRemainingTime(c: Color, centis: Centis) =
-    updatePlayer(c, p => p.copy(elapsed = limit - centis))
-
-  def goBerserk(c: Color) = updatePlayer(c, p => {
-    if (p.berserk) p
-    else p.copy(
-      berserk = true,
-      limit = p.limit - berserkPenalty
-    )
-  })
-}
-
 case class ClockPlayer(
     limit: Centis,
     elapsed: Centis = Centis(0),
     lag: Centis = Centis(0),
-    berserk: Boolean = false,
-    lagCompQuota: Centis = Centis(200)
+    berserk: Boolean = false
 ) {
-  def pending = timer.fold(elapsed)(t => elapsed + (t to now))
+  import ClockPlayer._
 
-  def remaining = limit - pending
+  def isInit = elapsed.centis == 0
+
+  def adjust(elapsedDelta: Centis, limitDelta: Centis = Centis(0)) = copy(
+    elapsed = elapsed + elapsedDelta,
+    limit = limit + limitDelta
+  )
+
+  def remaining = limit - elapsed
 
   def giveTime(t: Centis) = copy(limit = limit + t)
-  def stop = timer match {
-    case None => this
-    case _ => copy(elapsed = pending, timer = None)
+
+  def lagComp(lagOpt: Option[Centis]): Centis = lagOpt match {
+    case None => Centis(0)
+    case Some(lag) => lag atMost maxLagComp
   }
 
-  def start = timer match {
-    case None => copy(timer = Some(now))
-    case _ => this
-  }
+  def remainingGrace = remaining + (lag * 2 atMost maxGrace)
+}
 
-  def lagCompWith(lag: Option[Centis]): Centis = ???
+object ClockPlayer {
+  val maxLagComp = Centis(100)
+  val maxGrace = Centis(100)
 }
 
 object Clock {
@@ -190,10 +181,6 @@ object Clock {
   }
 
   val minLimit = Centis(300)
-  // no more than this time will be offered to the lagging player
-  val absoluteMaxLagComp = Centis(300)
-  val avgMaxLagComp = Centis(100)
-  val maxGrace = Centis(150)
 
   def apply(limit: Int, increment: Int): Clock = apply(Config(limit, increment))
 
@@ -206,7 +193,7 @@ object Clock {
     Clock(
       config = config,
       color = White,
-      players = Color.Map(_ => Player(limit = initTime)),
+      players = Color.Map(_ => ClockPlayer(limit = initTime)),
       timer = None
     )
   }

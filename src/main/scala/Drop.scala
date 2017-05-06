@@ -7,7 +7,7 @@ case class Drop(
     pos: Pos,
     before: Board,
     after: Board,
-    metrics: MoveMetrics = MoveMetrics()
+    lag: MoveMetrics = MoveMetrics()
 ) {
 
   def situationBefore = before situationOf piece.color
@@ -38,7 +38,7 @@ case class Drop(
 
   def withAfter(newBoard: Board) = copy(after = newBoard)
 
-  def withLag(m: MoveMetrics) = copy(metrics = m)
+  def withLag(l: MoveMetrics) = copy(lag = l)
 
   def toUci = Uci.Drop(piece.role, pos)
 

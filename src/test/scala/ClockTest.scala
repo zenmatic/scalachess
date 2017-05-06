@@ -31,7 +31,7 @@ class ClockTest extends ChessTest {
     }
   }
   "lag compensation" should {
-    def durOf(lag: Float) = Centis((100 * lag).toInt)
+    def durOf(lag: Float) = MoveMetrics(Some(Centis((100 * lag).toInt)))
     def clockStep(wait: Float, lag: Float): Double = {
       val clock = Clock(60, 0).start.step()
       // TODO: we should stub Clock::now instead of sleeping.
@@ -43,7 +43,7 @@ class ClockTest extends ChessTest {
       (clock step durOf(lag) remainingTime White) toSeconds
     }
     val delta = 0.2
-    val maxLag = Clock.maxLagToCompensate.toSeconds
+    val maxLag = ClockPlayer.maxLagComp.toSeconds
     "premove, no lag" in {
       clockStep(0, 0) must beCloseTo(60, delta)
     }

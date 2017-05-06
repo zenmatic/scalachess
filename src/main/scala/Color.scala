@@ -31,14 +31,18 @@ object Color {
   case class Map[A](white: A, black: A) {
     def apply(color: Color) = if (color.white) white else black
 
-    def update(color: Color, f: A => A) =
-      if (color.white) copy(white = f(white)) else copy(black = f(black))
+    def update(color: Color, f: A => A) = {
+      if (color.white) copy(white = f(white))
+      else copy(black = f(black))
+    }
 
     def map[B](fw: A => B, fb: A => B) = copy(white = fw(white), black = fb(black))
 
-    def map[B](f: A => B) = map(f, f)
+    def map[B](f: A => B): Map[B] = map(f, f)
 
-    def all(pred: A => Boolean) = pred(white) && pred(black)
+    def forall(pred: A => Boolean) = pred(white) && pred(black)
+
+    def exists(pred: A => Boolean) = pred(white) || pred(black)
   }
 
   object Map {
