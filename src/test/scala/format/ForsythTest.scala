@@ -306,6 +306,14 @@ class ForsythTest extends ChessTest {
           }
         }
       }
+      "winboard pockets" in {
+        f <<< "r1bk3r/ppp2ppp/4p3/1B1pP3/1b1N4/2N2qPp/PPP2NbP/4R1KR[PNq] b - - 39 20" must beSome.like {
+          case s => s.situation.board.crazyData must beSome.like {
+            case Data(Pockets(Pocket(Pawn :: Knight :: Nil), Pocket(Queen :: Nil)), promoted) =>
+              promoted must beEmpty
+          }
+        }
+      }
       "promoted none" in {
         f <<< "2b2rk1/3p2pp/2pNp3/4PpN1/qp1P3P/4P1K1/6P1/1Q6/pPP w - f6 0 36" must beSome.like {
           case s => s.situation.board.crazyData must beSome.like {
@@ -371,6 +379,13 @@ class ForsythTest extends ChessTest {
         f <<< "rnb1kbnr/pppp1ppp/8/4p3/4PP1q/8/PPPPK1PP/RNBQ1BNR b kq - 2 3 +1+2" must beSome.like {
           case s =>
             s.situation.board.history.checkCount.white must_== 2
+            s.situation.board.history.checkCount.black must_== 1
+        }
+      }
+      "winboard checks" in {
+        f <<< "r1bqkbnr/pppp1Qpp/2n5/4p3/4P3/8/PPPP1PPP/RNB1KBNR b KQkq - 2+3 0 3" must beSome.like {
+          case s =>
+            s.situation.board.history.checkCount.white must_== 0
             s.situation.board.history.checkCount.black must_== 1
         }
       }
