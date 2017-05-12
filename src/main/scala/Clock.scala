@@ -122,12 +122,10 @@ case class ClockPlayer(
 
   def giveTime(t: Centis) = copy(limit = limit + t)
 
-  def lagComp(lagOpt: Option[Centis]): Centis = lagOpt match {
-    case None => Centis(0)
-    case Some(lag) => lag atMost maxLagComp
-  }
+  def lagComp(lagOpt: Option[Centis]): Centis =
+    lagOpt.fold(Centis(0)) { _ atMost maxLagComp }
 
-  def remainingGrace = remaining + (lag * 2 atMost maxGrace)
+  def remainingGrace = remaining + ((lag * 2) atMost maxGrace)
 }
 
 object ClockPlayer {

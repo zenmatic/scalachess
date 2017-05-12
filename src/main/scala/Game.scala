@@ -15,9 +15,9 @@ case class Game(
     orig: Pos,
     dest: Pos,
     promotion: Option[PromotableRole] = None,
-    lag: MoveMetrics = MoveMetrics()
+    metrics: MoveMetrics = MoveMetrics()
   ): Valid[(Game, Move)] =
-    situation.move(orig, dest, promotion).map(_.normalizeCastle withLag lag) map { move =>
+    situation.move(orig, dest, promotion).map(_.normalizeCastle withMetrics metrics) map { move =>
       apply(move) -> move
     }
 
@@ -30,16 +30,16 @@ case class Game(
     val pgnMove = pgn.Dumper(situation, move, newGame.situation)
     newGame.copy(
       pgnMoves = pgnMoves.isEmpty.fold(List(pgnMove), pgnMoves :+ pgnMove),
-      clock = applyClock(move.lag, newGame.situation.status.isEmpty)
+      clock = applyClock(move.metrics, newGame.situation.status.isEmpty)
     )
   }
 
   def drop(
     role: Role,
     pos: Pos,
-    lag: MoveMetrics = MoveMetrics()
+    metrics: MoveMetrics = MoveMetrics()
   ): Valid[(Game, Drop)] =
-    situation.drop(role, pos).map(_ withLag lag) map { drop =>
+    situation.drop(role, pos).map(_ withMetrics metrics) map { drop =>
       applyDrop(drop) -> drop
     }
 
@@ -52,12 +52,12 @@ case class Game(
     val pgnMove = pgn.Dumper(situation, drop, newGame.situation)
     newGame.copy(
       pgnMoves = pgnMoves.isEmpty.fold(List(pgnMove), pgnMoves :+ pgnMove),
-      clock = applyClock(drop.lag, newGame.situation.status.isEmpty)
+      clock = applyClock(drop.metrics, newGame.situation.status.isEmpty)
     )
   }
 
-  private def applyClock(lag: MoveMetrics, withInc: Boolean) = clock.map {
-    case c if c.isRunning => c.step(lag, withInc)
+  private def applyClock(metrics: MoveMetrics, withInc: Boolean) = clock.map {
+    case c if c.isRunning => c.step(metrics, withInc)
     case c => if (turns - startedAtTurn == 1) c.switch.start else c.switch
   }
 
