@@ -5,6 +5,8 @@ case class Timestamp(value: Long) extends AnyVal with Ordered[Timestamp] {
 
   def -(o: Timestamp) = Centis.ofMillis(value - o.value)
 
+  def +(o: Centis) = Timestamp(value + o.millis)
+
   def toNow = Centis.ofMillis(nowMillis - value)
 
   def compare(other: Timestamp) = value compare other.value

@@ -36,11 +36,11 @@ class ClockTest extends ChessTest {
       val clock = Clock(60, 0).start.step()
       // TODO: we should stub Clock::now instead of sleeping.
       Thread sleep ((wait + lag) * 1000).toInt
-      (clock step durOf(lag) remainingTime Black) toSeconds
+      (clock step durOf(lag) get remainingTime Black) toSeconds
     }
     def clockStart(lag: Float): Double = {
       val clock = Clock(60, 0).start.step()
-      (clock step durOf(lag) remainingTime White) toSeconds
+      (clock step durOf(lag) get remainingTime White) toSeconds
     }
     val delta = 0.2
     val maxLag = ClockPlayer.maxLagComp.toSeconds
