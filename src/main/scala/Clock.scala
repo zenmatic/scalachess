@@ -9,12 +9,13 @@ case class Clock(
     config: Config,
     color: Color,
     players: Color.Map[ClockPlayer],
-    timer: Option[Timestamp] = None
+    timer: Option[Timestamp] = None,
+    provider: TimeProvider
 ) {
-  import Timestamp.now
+  import provider.now
 
   @inline private def pending(c: Color) = timer match {
-    case Some(t) if c == color => t.toNow
+    case Some(t) if c == color => provider toNow t
     case _ => Centis(0)
   }
 
@@ -35,7 +36,7 @@ case class Clock(
 
   def stop = timer.fold(this) { t =>
     copy(
-      players = players.update(color, _.takeTime(t.toNow)),
+      players = players.update(color, _.takeTime(provider toNow t)),
       timer = None
     )
   }
