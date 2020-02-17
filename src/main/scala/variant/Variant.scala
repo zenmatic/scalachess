@@ -29,6 +29,7 @@ abstract class Variant private[variant] (
   def horde         = this == Horde
   def racingKings   = this == RacingKings
   def crazyhouse    = this == Crazyhouse
+  def chaturanga    = this == Chaturanga
 
   def exotic = !standard
 
@@ -201,6 +202,7 @@ object Variant {
   val all = List(
     Standard,
     Crazyhouse,
+    Chaturanga,
     Chess960,
     FromPosition,
     KingOfTheHill,
