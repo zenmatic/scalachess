@@ -6,9 +6,9 @@ import Uci._
 
 class UciCharPairTest extends ChessTest {
 
-  // println(UciCharPair.implementation.pos2charMap.toList.sortBy(_._2.toInt))
-  // println(UciCharPair.implementation.promotion2charMap.toList.sortBy(_._2.toInt))
-  // println(UciCharPair.implementation.dropRole2charMap.toList.sortBy(_._2.toInt).map(x => x._1 -> x._2.toInt))
+  println(UciCharPair.implementation.pos2charMap.toList.sortBy(_._2.toInt))
+  println(UciCharPair.implementation.promotion2charMap.toList.sortBy(_._2.toInt))
+  println(UciCharPair.implementation.dropRole2charMap.toList.sortBy(_._2.toInt).map(x => x._1 -> x._2.toInt))
 
   "char pair encoding" should {
 
@@ -38,9 +38,9 @@ class UciCharPairTest extends ChessTest {
     }
     "drops" in {
       conv(Drop(Pawn, A1)).head must_== '#'
-      conv(Drop(Pawn, A1)).tail.head.toInt must_== 143
+      conv(Drop(Pawn, A1)).tail.head.toInt must_== 161
       conv(Drop(Queen, H8)).head must_== 'b'
-      conv(Drop(Queen, H8)).tail.head.toInt must_== 139
+      conv(Drop(Queen, H8)).tail.head.toInt must_== 155
     }
   }
 }

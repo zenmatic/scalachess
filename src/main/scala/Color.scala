@@ -16,6 +16,8 @@ sealed trait Color {
   val name: String
 
   def pawn   = this - Pawn
+  def ferz   = this - Ferz
+  def alfil  = this - Alfil
   def bishop = this - Bishop
   def knight = this - Knight
   def rook   = this - Rook

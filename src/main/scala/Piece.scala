@@ -25,6 +25,13 @@ case class Piece(color: Color, role: Role) {
         val yd = from yDist to
         (xd == 1 && yd == 2) || (xd == 2 && yd == 1)
       }
+    case Alfil =>
+      from.color == to.color && {
+        val xd = from xDist to
+        val yd = from yDist to
+        (xd == 2 && yd == 2)
+      }
+    case Ferz => (from touches to) && (from onSameDiagonal to)
     case Pawn => Piece.pawnEyes(color, from, to)
   }
 

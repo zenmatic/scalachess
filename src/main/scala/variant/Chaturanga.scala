@@ -17,10 +17,10 @@ case object Chaturanga
   override val pieces: Map[Pos, Piece] = Map(
     Pos.A1 -> White.rook,
     Pos.B1 -> White.knight,
-    Pos.C1 -> White.bishop,
-    Pos.D1 -> White.queen,
+    Pos.C1 -> White.alfil,
+    Pos.D1 -> White.ferz,
     Pos.E1 -> White.king,
-    Pos.F1 -> White.bishop,
+    Pos.F1 -> White.alfil,
     Pos.G1 -> White.knight,
     Pos.H1 -> White.rook,
     Pos.A2 -> White.pawn,
@@ -41,15 +41,15 @@ case object Chaturanga
     Pos.H7 -> Black.pawn,
     Pos.A8 -> White.rook,
     Pos.B8 -> White.knight,
-    Pos.C8 -> White.bishop,
+    Pos.C8 -> White.alfil,
     Pos.D8 -> Black.king,
-    Pos.E8 -> Black.queen,
-    Pos.F8 -> White.bishop,
+    Pos.E8 -> Black.ferz,
+    Pos.F8 -> White.alfil,
     Pos.G8 -> White.knight,
     Pos.H8 -> White.rook,
   )
 
   override val castles = Castles.none
 
-  override val initialFen = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBKQBNR w - - 0 1"
+  override val initialFen = "rnafkanr/pppppppp/8/8/8/8/PPPPPPPP/RNAKFANR w - - 0 1"
 }
