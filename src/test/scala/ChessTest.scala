@@ -18,6 +18,8 @@ trait ChessTest extends Specification with ValidationMatchers {
     def kingOfTheHill: Board = makeBoard(str, chess.variant.KingOfTheHill)
 
     def threeCheck: Board = makeBoard(str, chess.variant.ThreeCheck)
+
+    def chaturanga: Board = makeBoard(str, chess.variant.Chaturanga)
   }
 
   implicit def stringToSituationBuilder(str: String) = new {

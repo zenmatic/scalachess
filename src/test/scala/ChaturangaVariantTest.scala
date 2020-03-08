@@ -1,13 +1,16 @@
 package chess
 
-import variant.RacingKings
+import scalaz.Validation.FlatMap._
+import variant.Chaturanga
+import format.Forsyth
+import format.pgn.Reader
 
-class ChaturangaKingsVariantTest extends ChessTest {
+class ChaturangaVariantTest extends ChessTest {
 
-  "chaturanga" should {
+   "Chaturanga" should {
+       "initialize the board without castling rights" in {
+           Board.init(Chaturanga).history.castles.isEmpty must beTrue
+        }
+   }
 
-    "disallow discovered check" in {
-      true
-    }
-  }
 }

@@ -44,6 +44,7 @@ abstract class Variant private[variant] (
   def isValidPromotion(promotion: Option[PromotableRole]) = promotion match {
     case None                                 => true
     case Some(Queen | Rook | Knight | Bishop) => true
+    case Some(Ferz | Alfil)                   => true
     case _                                    => false
   }
 
